@@ -1,5 +1,6 @@
 // Launcher text in this language. The key is the English text the code passes to t(); {placeholders} stay as they are.
 export default {
+  "Guests carry their own inventory": "访客携带自己的物品栏",
   'Global defaults': '全局默认值',
   'Settings for': '设置对象',
   'Use global': '使用全局值',

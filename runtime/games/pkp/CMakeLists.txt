@@ -101,6 +101,8 @@ if(TARGET nxrt_gfx)
         "${_pkp}/core/pkp_journal_services_shop.cpp"
         "${_pkp}/core/pkp_journal_services_discovery.cpp"
         "${_pkp}/core/pkp_game.cpp"
+        "${_pkp}/core/pkp_cloud_island.cpp"
+        "${_pkp}/core/pkp_unified_inventory.cpp"
         "${_pkp}/core/pkp_link_digspots.cpp"
         "${_pkp}/core/pkp_link_trips.cpp"
         "${_pkp}/core/pkp_linkplay.cpp"

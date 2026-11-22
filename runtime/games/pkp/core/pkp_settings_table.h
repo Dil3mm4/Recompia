@@ -85,6 +85,8 @@ inline constexpr Spec kSpecs[] = {
     b(QualityProbe, "quality_probe", false, "Log what the quality hooks see (diagnostics)."),
     i(GameTaa, "game_taa", 0, 0, 2, "Experimental: 1 turns on the engine's camera TAA jitter, 2 also its TemporalAA3 pass switch (0: the game's)."),
     b(LinkInteractEverywhere, "link_interact_everywhere", false, "Experimental: Link Play visitors can interact outside Palette Town."),
+    opt_in(gameplay(b(GuestIslandBuilding, "guest_island_building", false,
+        "Experimental: Link Play guests can build across islands and carry their own offline inventory when visiting; pickups and changes return home. Both Recompia players must enable it and restart."))),
     // Seamless co-op: written by the launcher into the environment of one launch (NXRT_PKP_COOP, NXRT_PKP_COOP_ROLE, ...), never by a
     // Settings row. Not a gameplay mod: it is a way to start the game, not a change to how it plays.
     b(Coop, "coop", false, "Launcher only: this launch plays a seamless co-op session (with coop_role, coop_group and coop_member)."),

@@ -289,6 +289,9 @@ constexpr Row kGameplay[] = {
 // The inventory mods (bag, storage boxes), gameplay() rows like kGameplay's and labelled as in the launcher, in a tab of their own so the
 // Gameplay tab keeps room within its kDirtySlot (13) rows.
 constexpr Row kInventory[] = {
+    key_row("Guests carry their own inventory",
+            "Link Play: guests can build on other islands and carry their own bag in and out of each visit. Turn on for both Recompia players; restart the game. Experimental; back up saves first.",
+            Key::GuestIslandBuilding),
     key_row("Sort button in the bag and containers", "Click Hold to Sort in the bag and storage boxes to sort at once.", Key::InventorySort),
     key_row("Sort each time the bag opens", "Sorts the bag each time the bag or a container screen opens.", Key::InventoryAutosort),
     key_row("Storage box tabs", "Extra pages in storage boxes; L or R switches them. About the first 22 boxes (big boxes: 42) get every page. Off in Link Play.", Key::BoxTabs),

@@ -328,6 +328,7 @@ const GAMEPLAY = {
     after: [{ id: 'camera_aim_note', type: 'note', when: isOn('camera_aim'), note: () => ({ text: t('Abilities and tools aim where the camera looks instead of where your character faces, and your character turns to the target when the ability starts.') }) }],
   },
   camera_aim_reach: { label: t('Extra reach in blocks'), options: (k) => Array.from({ length: k.max - k.min + 1 }, (_, n) => n + k.min).map((n) => ({ value: String(n), label: n === 0 ? t('Off') : num(n) })) },
+  guest_island_building: { label: t('Guests carry their own inventory') },
   inventory_sort: { label: t('Sort button in the bag and containers') },
   inventory_autosort: { label: t('Sort each time the bag opens') },
   box_tabs: { label: t('Storage box tabs') },

@@ -49,6 +49,7 @@ enum class Key : uint8_t {
     GameTaa,
     // gameplay and menus
     LinkInteractEverywhere,
+    GuestIslandBuilding, // experimental guest building + portable offline bag across Link Play
     // seamless co-op (pkp_coop.cpp): set by the launcher for one launch, no row in the game's Settings (it cannot change while the game runs)
     Coop,
     CoopRole,

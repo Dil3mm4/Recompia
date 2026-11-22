@@ -14,3 +14,5 @@ _nx_site_midhook
 _nx_hook_entry
 _stx_diag
 _nx_catch_call
+_h_cloud_dispatch_fiber
+_h_cloud_island_thread_entry

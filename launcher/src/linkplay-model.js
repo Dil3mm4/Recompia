@@ -74,6 +74,7 @@ export function readIni(pkp) {
     internet: truthy(ini('net.internet')),
     relay: ini('net.relay'),
     interact: truthy(ini('pkp.link_interact_everywhere')),
+    guestBuilding: truthy(ini('pkp.guest_island_building')),
   };
 }
 
@@ -110,6 +111,7 @@ export function uiFrom(pkp, mem = {}) {
     relay: internet && !direct && !pub ? ownRelay : ownRelay || memRelay,
     visitAddr: direct ? join : internet && ownRelay ? ownRelay : through ? memRelay : remembered(mem.joinAddr),
     interact: n.interact,
+    guestBuilding: n.guestBuilding,
   };
 }
 
@@ -128,6 +130,7 @@ export const visitEdits = (addr, through) => choice(net('mode', through ? 'auto'
 export const protocolEdits = () => choice();
 
 export const interactEdits = (on) => [pkpKey('link_interact_everywhere', on ? 'true' : 'false')];
+export const guestBuildingEdits = (on) => [pkpKey('guest_island_building', on ? 'true' : 'false')];
 
 export function applyEdits(pkp, edits) {
   const next = { ...pkp };

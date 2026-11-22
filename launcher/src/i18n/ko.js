@@ -1,5 +1,6 @@
 // Launcher text in this language. The key is the English text the code passes to t(); {placeholders} stay as they are.
 export default {
+  "Guests carry their own inventory": "방문자가 자신의 인벤토리를 가져옵니다",
   'Global defaults': '전체 기본값',
   'Settings for': '설정 대상',
   'Use global': '전체 설정 사용',

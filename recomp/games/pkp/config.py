@@ -28,7 +28,12 @@ class Config(GameConfig):
         ModuleSpec('subsdk0', 0x7600000000, 'subsdk0', shards=4),
         ModuleSpec('rtld', 0x7700000000, 'rtld', shards=1, entry=True),
     ]
-    overrides = {}
+    # Route the SDK fiber switch and cloud-island worker entry to host implementations; the per-module lifter
+    # override replaces direct calls and function-table entries before the generated modules are linked.
+    overrides = {
+        0x750014f648: 'cloud_dispatch_fiber',
+        0x7101769584: 'cloud_island_thread_entry',
+    }
     # registers and flags in C locals, flags stored around calls only where a module summary says they can be read (nxrecomp/config.py)
     reg_locals = 'lean'
     # rtld's process entry (0x0) has no FDE, symbol or direct branch, so discovery never roots it (runtime/docs/S6.md)

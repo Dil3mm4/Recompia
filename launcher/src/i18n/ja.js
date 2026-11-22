@@ -1,5 +1,6 @@
 // Launcher text in this language. The key is the English text the code passes to t(); {placeholders} stay as they are.
 export default {
+  "Guests carry their own inventory": "ゲストは自分の持ち物を持参する",
   'Global defaults': '全体の既定値',
   'Settings for': '設定対象',
   'Use global': '全体の設定を使用',

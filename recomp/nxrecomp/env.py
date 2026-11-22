@@ -22,7 +22,9 @@ class Env:
         self.text_hi = self.text_lo + img.text_size
         self.full = full
         self.wanted = collections.OrderedDict()
-        self.overrides = dict(self.cfg.overrides)
+        # Overrides belong to the module whose guest text contains the address. Keeping them module-local
+        # prevents an SDK override from leaking into every NxModule's function table.
+        self.overrides = {a: n for a, n in self.cfg.overrides.items() if self.text_lo <= a < self.text_hi}
         self.imports = set()
         self.plt_cache, self.plt_slot = {}, {}
         self.plt_syms = None
@@ -103,8 +105,12 @@ class Env:
 
     # ---- direct calls
     def call(self, target):
-        if target in self.overrides:
-            return f'h_{self.overrides[target]}(c);'
+        # Use the full absolute-address map here as well as the module-local map. A direct branch can be
+        # lifted from a thunk whose function extent was assigned to a neighboring module range; it still
+        # must reach the host override rather than the generated guest function.
+        override = self.overrides.get(target, self.cfg.overrides.get(target))
+        if override is not None:
+            return f'h_{override}(c);'
         if not (self.text_lo <= target < self.text_hi):
             return f'call_indirect(c, 0x{target:x}ULL);'          # another module / not code of this one
         self.wanted.setdefault(target, None)

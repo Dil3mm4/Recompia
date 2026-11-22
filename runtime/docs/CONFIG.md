@@ -421,6 +421,7 @@ The game's own keys, in the `[pkp]` section of the game ini (`pkp.ini`; `nxrt.in
 | `pkp` | `quality_probe` | `0` | `1` `0` | `NXRT_PKP_QUALITY_PROBE` | Log what the quality hooks see (diagnostics). Next start. |
 | `pkp` | `game_taa` | `0` | `0` to `2` (clamped into it) | `NXRT_PKP_GAME_TAA` | Experimental: 1 turns on the engine's camera TAA jitter, 2 also its TemporalAA3 pass switch (0: the game's). Next start. |
 | `pkp` | `link_interact_everywhere` | `0` | `1` `0` | `NXRT_PKP_LINK_INTERACT_EVERYWHERE` | Experimental: Link Play visitors can interact outside Palette Town. Next start. |
+| `pkp` | `guest_island_building` | `0` | `1` `0` | `NXRT_PKP_GUEST_ISLAND_BUILDING` | Experimental: Link Play guests can build across islands and carry their own offline inventory when visiting; pickups and changes return home. Both Recompia players must enable it and restart. Next start. |
 | `pkp` | `coop` | `0` | `1` `0` | `NXRT_PKP_COOP` | Launcher only: this launch plays a seamless co-op session (with coop_role, coop_group and coop_member). Next start. |
 | `pkp` | `coop_role` | unset | `host` `visit` | `NXRT_PKP_COOP_ROLE` | Launcher only, with coop: host opens the co-op session, visit joins it. Next start. |
 | `pkp` | `coop_group` |  | text | `NXRT_PKP_COOP_GROUP` | Launcher only, with coop: the id of the co-op group this launch plays in. Next start. |

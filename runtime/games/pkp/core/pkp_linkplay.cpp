@@ -14,6 +14,7 @@
 // and the host's settings row still say Spectator Mode; a visitor's bag goes home with it as in Palette Town.
 #include "core/pkp_linkplay.h"
 #include "core/pkp_coop.h"
+#include "core/pkp_unified_inventory.h"
 #include "core/pkp_settings.h"
 
 #include <atomic>
@@ -130,7 +131,7 @@ void install(const FeatureInstall& in) {
     s.changes.store(0);
     s.mods_set.store(false);
     services::ldnapi::set_session_variant(0, kInteractName);
-    if (!settings::get_bool(settings::Key::LinkInteractEverywhere)) {
+    if (!settings::get_bool(settings::Key::LinkInteractEverywhere) && !unified::requested()) {
         NXLOG_I(kTag, "Interact everywhere ([pkp] link_interact_everywhere): off, Link Play outside Palette Town keeps the game's Spectator Mode");
         return;
     }
@@ -178,6 +179,7 @@ namespace {
 void publish_coop_mods() {
     std::vector<std::string> mods = nxrt::mods::gameplay_mods();
     if (settings::get_bool(settings::Key::Coop)) mods.insert(mods.begin(), kCoopRules);
+    if (unified::requested()) mods.push_back("Recompia guest island inventory v2");
     services::ldnapi::set_coop_mods(mods);
 }
 

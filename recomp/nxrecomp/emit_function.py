@@ -44,7 +44,9 @@ def lift_function(env, entry, text=True):
         if shndx:                                    # symbol defined inside this module
             tgt = env.base + value
             env.wanted.setdefault(tgt, None)
-            return 'void f_%x(Ctx *__restrict c) { f_%x(c); }' % (entry, tgt), 0, [], []
+            # A defined-symbol PLT thunk can target a host override too (for example the SDK's direct
+            # DispatchFiberContext calls). Route it through Env.call so the thunk cannot bypass the override.
+            return 'void f_%x(Ctx *__restrict c) { %s return; }' % (entry, env.call(tgt)), 0, [], []
         env.imports.add(env.plt_symbol(entry))
         return 'void f_%x(Ctx *__restrict c) { host_import(c, NX_IMPORT_ID(%d, %d)); }' % (entry, env.module_index, sym), 0, [], []
     end = env.extent(entry)

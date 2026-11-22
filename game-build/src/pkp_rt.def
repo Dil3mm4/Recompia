@@ -16,3 +16,5 @@ EXPORTS
     nx_hook_entry
     stx_diag
     nx_catch_call
+    h_cloud_dispatch_fiber
+    h_cloud_island_thread_entry

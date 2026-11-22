@@ -1,5 +1,6 @@
 // Launcher text in this language. The key is the English text the code passes to t(); {placeholders} stay as they are.
 export default {
+  "Guests carry their own inventory": "Los invitados llevan su propio inventario",
   'Global defaults': 'Valores globales predeterminados',
   'Settings for': 'Ajustes para',
   'Use global': 'Usar valor global',

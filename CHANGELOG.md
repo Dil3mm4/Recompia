@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Link Play guests can carry their own inventory and keep confirmed item changes when returning home. Enable “Guests carry their own inventory” on both peers. Use Set up again after updating. Existing shaders are kept.
+
 **Update:** press **Update** in the launcher, then **Set up again** once (new game hook points for the mouse mode pointer, the co-op PC menu, co-op's Life Coins, co-op's area gates, co-op's bags, co-op's cleaning count, co-op's shared rules for every player and the logs; saves and shaders are kept, no shader is translated again).
 
 ### Game

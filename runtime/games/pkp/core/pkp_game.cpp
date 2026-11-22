@@ -16,6 +16,7 @@
 #include "core/pkp_link_digspots.h"
 #include "core/pkp_link_trips.h"
 #include "core/pkp_linkplay.h"
+#include "core/pkp_unified_inventory.h"
 #include "render/pkp_loading_backdrop.h"
 #include "core/pkp_mods.h"
 #include "ui/pkp_menu.h"
@@ -95,7 +96,7 @@ constexpr Entry port(const Feature* f) { return {f, {settings::Key::Count, setti
 
 using enum settings::Key;
 constexpr Entry kEntries[] = {
-    port(&kSaveUuidFeature), port(&kLinkplayFeature), port(&kJournalFeature), port(&kCoopFeature),
+    port(&kSaveUuidFeature), port(&kLinkplayFeature), mod(&kUnifiedInventoryFeature, GuestIslandBuilding), port(&kJournalFeature), port(&kCoopFeature),
 #if NXRT_TESTTOOLS
     port(&kCoopProbeFeature),
 #endif

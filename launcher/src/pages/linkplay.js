@@ -9,7 +9,7 @@ import { errText, esc, field, group, icon, row, segmented, toast, toggle } from 
 import { store } from '../store.js';
 import { gamePhase } from '../action.js';
 import {
-  HOST_PORT, RELAY_PORT, addrProblem, addressRows, applyEdits, editsFor, interactEdits, internetShare, pathParts, protocolEdits, readIni,
+  HOST_PORT, RELAY_PORT, addrProblem, addressRows, applyEdits, editsFor, guestBuildingEdits, interactEdits, internetShare, pathParts, protocolEdits, readIni,
   relayPort, uiFrom,
 } from '../linkplay-model.js';
 
@@ -100,6 +100,7 @@ export async function render(el, ctx) {
       : '';
     return group(t('Same for everyone'), [
       row(t('Visitors can build everywhere'), exp + toggle('lp-interact', ui.interact)),
+      row(t('Guests carry their own inventory'), exp + toggle('lp-guest-build', ui.guestBuilding)),
     ]) + mods;
   }
 
@@ -321,6 +322,7 @@ export async function render(el, ctx) {
       await save(edits);
       const n = readIni(pkp);
       ui.interact = n.interact;
+      ui.guestBuilding = n.guestBuilding;
     } catch (e) {
       input.checked = !input.checked;
       throw e;
@@ -368,6 +370,7 @@ export async function render(el, ctx) {
     else if (t.id === 'lp-run-relay') setRelay(t.checked);
     else if (t.id === 'lp-own') setOwn(t.checked);
     else if (t.id === 'lp-interact') setShared(interactEdits(t.checked), t);
+    else if (t.id === 'lp-guest-build') setShared(guestBuildingEdits(t.checked), t);
     else if (t.id === 'lp-through') {
       ui.through = t.checked;
       remember({ through: t.checked });

@@ -13,10 +13,12 @@
 
 #include <cstdio>
 #include <cstring>
+#include <condition_variable>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <vector>
 
 #include "nxrt/config.h"
@@ -431,10 +433,10 @@ vsock::Ret add_fd(const std::shared_ptr<Sock>& sk) {
 
 void install_fibers();
 
+// Legacy fallback is retained, but no longer called from eventfd.
 void patch_fiber_dispatch();
 
 vsock::Ret eventfd(uint64_t init, int flags) {
-    patch_fiber_dispatch();   // the SDK asks for its event descriptor right before it starts its fibers
     if (!enabled() || !vnet::ensure_winsock()) return fail(vsock::kEnetdown);
     auto sk = std::make_shared<Sock>();
     if (!loop_pair(&sk->s, &sk->wake)) return wsafail();
@@ -668,6 +670,14 @@ vsock::Ret setsockopt(int fd, int level, int opt, const void* v, size_t n) {
                 ::setsockopt(sk->s, SOL_SOCKET, host, reinterpret_cast<const char*>(&val), sizeof val);
                 return {0, 0};
             }
+            case vsock::kSoBroadcast: {
+                int val = 0;
+                if (n >= 4) std::memcpy(&val, b, 4);
+                const BOOL on = val != 0;
+                if (::setsockopt(sk->s, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&on), sizeof on) != 0)
+                    return wsafail();
+                return {0, 0};
+            }
             default:
                 return {0, 0};   // SO_NOSIGPIPE and the rest: accepted
         }
@@ -850,9 +860,9 @@ int so_error(int fd) {
 // nn::os::detail::DispatchFiberContext(FiberContext** save, FiberContext** load): it pushes x19..x30 and q8..q15 in a 0xF0-byte frame on
 // the guest stack, stores sp in *save, takes sp from *load, pops the same frame and returns there (a new fiber's frame holds its
 // FiberType in the x0 slot and "entry | 1" in the x30 slot). Lifted code cannot return into another function's host frame, so each
-// guest fiber gets a host fiber (Windows fibers): the replacement below keeps the guest-visible frames exactly as the SDK writes them
-// and switches the host stack with them. Addresses are for the 2.0.1 sdk image at 0x7500000000 (build 2.0.1a); other builds: off.
-// Limit: a fiber must be resumed on the guest thread that last ran it (the lifted code holds that thread's Ctx).
+// guest fiber gets a dedicated host thread and its own Ctx. Dispatch hands off between those threads; this supports the SDK moving
+// fibers between its worker threads and avoids cross-thread ucontext/Win32-fiber switches. Addresses are for the 2.0.1 sdk image at
+// 0x7500000000 (build 2.0.1a); other builds: off.
 // =============================================================================================================================================
 namespace {
 
@@ -861,9 +871,16 @@ constexpr uint64_t kMainBase = 0x7100000000ull;
 constexpr uint64_t kDispatchFiber = kSdkBase + 0x14f648;   // nn::os::detail::DispatchFiberContext
 constexpr uint64_t kFiberEntry = kSdkBase + 0x14ba10;      // where a new fiber starts (x0 = its FiberType)
 
+#if defined(_WIN32)
+// guest fiber gets a host fiber (Windows fibers): the replacement below keeps the guest-visible frames exactly as the SDK writes them
+// and switches the host stack with them. Addresses are for the 2.0.1 sdk image at 0x7500000000 (build 2.0.1a); other builds: off.
+// Limit: a fiber must be resumed on the guest thread that last ran it (the lifted code holds that thread's Ctx).
 // Every guest fiber has its own host fiber AND its own Ctx: the lifted frames on a host fiber hold the Ctx pointer they were entered
 // with, and the SDK resumes a fiber on whichever pool thread is free, so the registers cannot live in a thread's Ctx. The thread
 // pointers (tpidr, tpidrro) follow the thread that runs the fiber: they are copied in at every switch.
+// The Windows build must switch the host stack together with the guest fiber frame. The detached-thread
+// scheduler below let a guest fiber's lifted frames resume on a different host stack than the one they
+// started on; the crash logs show that path faulting inside the SDK fiber entry with a null write.
 struct FiberRec {
     void* host = nullptr;
     ::Ctx* ctx = nullptr;
@@ -892,6 +909,10 @@ void dispatch_fiber(::Ctx* c) {
     *reinterpret_cast<uint64_t*>(static_cast<uintptr_t>(save)) = s;
 
     void* self = IsThreadAFiber() ? GetCurrentFiber() : ConvertThreadToFiber(nullptr);
+    if (!self) {
+        NXLOG_E("net", "cloud: cannot convert the current thread to a fiber (error %lu)", GetLastError());
+        return;
+    }
     const uint64_t t = *reinterpret_cast<uint64_t*>(static_cast<uintptr_t>(load));
     const uint64_t* g = reinterpret_cast<const uint64_t*>(static_cast<uintptr_t>(t));
     const bool fresh = g[0] != 0;   // a new fiber: InitializeImpl put its FiberType in the x0 slot (a suspended frame has 0 there)
@@ -906,8 +927,17 @@ void dispatch_fiber(::Ctx* c) {
     }
     if (fresh) {
         to.ctx = static_cast<::Ctx*>(_aligned_malloc(sizeof(::Ctx), 64));
+        if (!to.ctx) {
+            NXLOG_E("net", "cloud: could not allocate a guest fiber context");
+            return;
+        }
         std::memcpy(to.ctx, c, sizeof(::Ctx));
         to.host = CreateFiberEx(0x10000, 0x400000, 0, fiber_main, to.ctx);
+        if (!to.host) {
+            _aligned_free(to.ctx);
+            NXLOG_E("net", "cloud: could not create a host fiber (error %lu)", GetLastError());
+            return;
+        }
         std::lock_guard<std::mutex> lk(g_fiber_mu);
         g_fibers[load] = to;
         static std::atomic<int> made{0};
@@ -931,6 +961,111 @@ void dispatch_fiber(::Ctx* c) {
     SwitchToFiber(to.host);
     // resumed, maybe on another thread: whoever switched back loaded this fiber's Ctx (the c of this call) from the frame pushed above
 }
+#else
+// Every guest fiber has its own host thread and Ctx: lifted frames hold the Ctx pointer they were entered with, and the SDK may resume
+// a fiber on any worker thread, so its registers cannot live in a thread's Ctx. The thread pointers (tpidr, tpidrro) follow the guest
+// thread: they are copied in at every switch.
+struct FiberRec {
+    ::Ctx* ctx = nullptr;
+    std::mutex mu;
+    std::condition_variable cv;
+    bool scheduled = false;
+};
+std::mutex g_fiber_mu;
+std::map<uint64_t, std::shared_ptr<FiberRec>> g_fibers;   // guest context slot -> its host thread/context
+thread_local std::shared_ptr<FiberRec> t_fiber;
+
+void fiber_main(const std::shared_ptr<FiberRec>& rec) {
+    t_fiber = rec;
+    ::Ctx* c = rec->ctx;                  // loaded before the new fiber's thread is released
+    {
+        std::unique_lock<std::mutex> lk(rec->mu);
+        rec->cv.wait(lk, [&] { return rec->scheduled; });
+        rec->scheduled = false;
+    }
+    const GuestFn entry = fn_lookup(kFiberEntry);
+    if (!entry) NXLOG_E("net", "cloud: no lifted function at the fiber entry 0x%llx", static_cast<unsigned long long>(kFiberEntry));
+    if (entry && c) entry(c);
+    NXLOG_E("net", "cloud: a fiber's entry function returned; parking its host fiber");
+    std::unique_lock<std::mutex> lk(rec->mu);
+    for (;;) {
+        rec->cv.wait(lk, [&] { return rec->scheduled; });
+        rec->scheduled = false;
+    }
+}
+
+void dispatch_fiber(::Ctx* c) {
+    const uint64_t save = c->x[0], load = c->x[1];
+    const uint64_t s = c->x[31] - 0xf0;
+    uint64_t* f = reinterpret_cast<uint64_t*>(static_cast<uintptr_t>(s));
+    f[0] = 0;
+    for (int i = 0; i < 11; ++i) f[1 + i] = c->x[19 + i];   // x19..x29
+    f[12] = c->x[30];
+    f[13] = 0;
+    for (int i = 0; i < 8; ++i) std::memcpy(reinterpret_cast<uint8_t*>(f) + 0x70 + i * 16, &c->v[8 + i], 16);
+    *reinterpret_cast<uint64_t*>(static_cast<uintptr_t>(save)) = s;
+
+    if (!t_fiber) {
+        t_fiber = std::make_shared<FiberRec>();
+        t_fiber->ctx = c;
+    }
+    const uint64_t t = *reinterpret_cast<uint64_t*>(static_cast<uintptr_t>(load));
+    const uint64_t* g = reinterpret_cast<const uint64_t*>(static_cast<uintptr_t>(t));
+    const bool fresh = g[0] != 0;   // a new fiber: InitializeImpl put its FiberType in the x0 slot (a suspended frame has 0 there)
+    const std::shared_ptr<FiberRec> from = t_fiber;
+    std::shared_ptr<FiberRec> to;
+    {
+        std::lock_guard<std::mutex> lk(g_fiber_mu);
+        g_fibers[save] = from;
+        if (!fresh) {
+            auto it = g_fibers.find(load);
+            if (it != g_fibers.end()) to = it->second;
+        }
+    }
+    if (fresh) {
+        to = std::make_shared<FiberRec>();
+        to->ctx = static_cast<::Ctx*>(_aligned_malloc(sizeof(::Ctx), 64));
+        if (!to->ctx) {
+            NXLOG_E("net", "cloud: could not allocate a guest fiber context");
+            return;
+        }
+        std::memcpy(to->ctx, c, sizeof(::Ctx));
+        {
+            std::lock_guard<std::mutex> lk(g_fiber_mu);
+            g_fibers[load] = to;
+        }
+        static std::atomic<int> made{0};
+        const int n = ++made;
+        if (n <= 4 || n % 256 == 0)
+            NXLOG_I("net", "cloud: guest fiber %d started on a dedicated host thread (context slot 0x%llx)", n, static_cast<unsigned long long>(load));
+        std::thread([to] { fiber_main(to); }).detach();
+    }
+    if (!to || !to->ctx) {
+        NXLOG_E("net", "cloud: fiber switch to an unknown context slot 0x%llx (sp 0x%llx)", static_cast<unsigned long long>(load),
+                static_cast<unsigned long long>(t));
+        return;
+    }
+    ::Ctx* d = to->ctx;
+    d->x[0] = g[0];
+    for (int i = 0; i < 11; ++i) d->x[19 + i] = g[1 + i];
+    d->x[30] = g[12];
+    d->x[1] = g[13];
+    for (int i = 0; i < 8; ++i) std::memcpy(&d->v[8 + i], reinterpret_cast<const uint8_t*>(g) + 0x70 + i * 16, 16);
+    d->x[31] = t + 0xf0;
+    d->tpidr = c->tpidr;         // the fiber now runs on this thread
+    d->tpidrro = c->tpidrro;
+    if (to == from) return;
+    {
+        std::lock_guard<std::mutex> lk(to->mu);
+        to->scheduled = true;
+    }
+    to->cv.notify_one();
+    std::unique_lock<std::mutex> lk(from->mu);
+    from->cv.wait(lk, [&] { return from->scheduled; });
+    from->scheduled = false;
+    // Resumed on this fiber's own host thread after another fiber loaded its Ctx from the guest frame pushed above.
+}
+#endif
 
 }  // namespace
 
@@ -946,6 +1081,8 @@ void install_fibers() {
     });
 }
 
+// Original runtime fallback retained for reference and compatible future use; the active game
+// now uses lifter overrides. Do not call this fallback from eventfd: it would patch code already overridden.
 // The lifted sdk calls DispatchFiberContext directly (no import slot), so the host code of the lifted function is redirected:
 // its first 12 bytes become "mov rax, dispatch_fiber; jmp rax" (an arm64 host: 16 bytes, "ldr x16, #8; br x16" and the address).
 // Both are GuestFn, so the Ctx* stays in the first argument register. Proof of concept only.
@@ -1011,6 +1148,10 @@ void patch_fiber_dispatch() {
         }
     });
 }
+
+// The lifter replaces the SDK's direct DispatchFiberContext calls with this handler (pkp config: sdk override).
+// Keeping the switch at the guest-call boundary avoids modifying executable pages, which macOS forbids for this image.
+extern "C" void h_cloud_dispatch_fiber(::Ctx* c) { dispatch_fiber(c); }
 
 #if !defined(_WIN32)
 // The POSIX <winsock2.h> renames BSD calls with object-like macros (select -> nxos_select and so on; see its comment), and six of

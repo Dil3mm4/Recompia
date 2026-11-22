@@ -764,3 +764,22 @@ midhook 0x71004a1adc
 #   the event start 0x710047bf80 the `and w24, w24, w0` after each character's IsMine (x20 = &actor id)
 midhook 0x71004774e8
 midhook 0x710047bfe4
+# Recompia guest inventory bridge (main 2.0.1).
+# online bag serialization pre-copy
+midhook 0x71005b382c
+# offline bag serialization pre-copy
+midhook 0x71005b3970
+# return-home bag restoration
+midhook 0x71005b3aac
+# pre-reset inventory preservation
+midhook 0x71005b08c0
+# post-reset inventory update
+midhook 0x71005b0a44
+# arrival bag native import
+midhook 0x7100572acc
+# native importer epilogue
+midhook 0x7100572ae4
+# host validates the authenticated visitor's inventory before ResourceUse
+midhook 0x7100539f1c
+# ResourceUse has returned the game's success bit in w0; w19 still identifies the same visitor
+midhook 0x7100539f80
