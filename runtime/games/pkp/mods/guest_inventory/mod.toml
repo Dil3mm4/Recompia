@@ -1,0 +1,69 @@
+id = "guest_inventory"
+name = "Guests carry their own inventory"
+version = "0.1.0"
+description = "Link Play visitors bring their offline bag, keep confirmed changes and restore items on returning home."
+license = "GPL-3.0-or-later"
+loader = ">=0.8.0 <1.0.0"
+game = ["2.0.1"]
+platforms = ["macos-arm64", "windows-x64"]
+affects = "gameplay"
+
+[[hooks."2.0.1"]]
+name = "serialize_online"
+target = "main+0x5b382c"
+word = 0x9100427a
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "serialize_offline"
+target = "main+0x5b3970"
+word = 0x910ab29a
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "restore_home"
+target = "main+0x5b3aac"
+word = 0xb94022a8
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "before_reset"
+target = "main+0x5b08c0"
+word = 0xaa0003f3
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "after_reset"
+target = "main+0x5b0a44"
+word = 0xa9415ff8
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "arrival_import"
+target = "main+0x572acc"
+word = 0xf9400288
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "importer_end"
+target = "main+0x572ae4"
+word = 0xaa1503e0
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "resource_before"
+target = "main+0x539f1c"
+word = 0x910ec2d7
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "resource_after"
+target = "main+0x539f80"
+word = 0x12000018
+kind = "take_over"
+
+[[hooks."2.0.1"]]
+name = "permissions"
+target = "main+0xb1030"
+word = 0xf2c0002d
+kind = "take_over"
