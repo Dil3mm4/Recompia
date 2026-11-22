@@ -46,6 +46,12 @@ struct Host {
 Host& host();
 
 MtBackend make_backend();   // modtopia_backend.cpp: every callback the host provides; the rest NULL
+// modtopia_session.cpp: native-mod traffic over the active session network.
+int session_subscribe(MtMod*, uint32_t, MtSessionMessageFn, MtSessionMemberFn, void*);
+int session_send(MtMod*, int32_t, uint32_t, const void*, size_t);
+int32_t session_self();
+int32_t session_authority();
+void session_drain();
 // modtopia_input.cpp: the players' pads for mods, through the hid service's input filter (installed once, when a code mod started).
 void install_input();
 int pad_read(int p, MtPad* out);

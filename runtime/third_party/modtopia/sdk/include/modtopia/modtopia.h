@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 #define MT_API_VERSION_MAJOR 0
-#define MT_API_VERSION_MINOR 7
+#define MT_API_VERSION_MINOR 8
 #define MT_API_VERSION ((uint32_t)(MT_API_VERSION_MAJOR << 16 | MT_API_VERSION_MINOR))
 
 #if defined(_WIN32)
@@ -105,6 +105,14 @@ typedef struct MtSaveIdentity {
     uint64_t title_id;
     uint8_t account_id[16];
 } MtSaveIdentity;
+
+/* API 0.8: traffic on the game's session virtual network (LAN or relay).
+ * Callbacks execute on the game thread; message bytes are valid only during the callback.
+ * One owner per message type. All subscriptions live for the game process. */
+typedef void (*MtSessionMessageFn)(MtMod *mod, int32_t from, uint32_t type,
+                                    const void *data, size_t size, void *user);
+typedef void (*MtSessionMemberFn)(MtMod *mod, int32_t node, int joined,
+                                   int authority, void *user);
 
 /* ---------------------------------------------------------------- guest calls
  * x0..x7 and v0..v7 in; on return x0..x7 and v0..v7 hold what the game function left (x0/x1 and v0..v3 are its results). Only on a game
@@ -240,6 +248,16 @@ struct MtHost {
        same identity: mods must track their own binding and wait for SaveLoaded before using gameplay data. Call on a game thread.
        MT_OK fills out; MT_ERR_STATE means no selected account, MT_ERR_VERSION no host support. Failure clears out; NULL out: MT_ERR. */
     int (*save_identity)(MtMod *mod, MtSaveIdentity *out);
+
+    /* ---- API 0.8: reliable ordered game-session messaging; not HTTP.
+     * session_subscribe starts the shared channel. Only one mod may own a type.
+     * session_send copies up to 1 MiB and may fail when the peer has left.
+     * self/authority return -1 outside an active session. */
+    int (*session_subscribe)(MtMod *mod, uint32_t type, MtSessionMessageFn message,
+                             MtSessionMemberFn member, void *user);
+    int (*session_send)(MtMod *mod, int32_t peer, uint32_t type, const void *data, size_t size);
+    int32_t (*session_self)(void);
+    int32_t (*session_authority)(void);
 };
 
 #define MT_HOST_HAS(host, field) ((host)->size >= offsetof(MtHost, field) + sizeof((host)->field))

@@ -142,6 +142,15 @@ typedef struct MtBackend {
     /* API 0.7: selected local title/account within save_dir, not a loaded-world or save-generation identifier. MT_OK fills out;
        MT_ERR_STATE when no local account is selected. NULL: unsupported. Called on a game thread with non-NULL out. */
     int (*save_identity)(void *user, MtSaveIdentity *out);
+
+    /* API 0.8: optional session transport. Callbacks and mod handle stay process-lived.
+       NULL callbacks yield MT_ERR_VERSION from the SDK. */
+    int (*session_subscribe)(void *user, MtMod *mod, uint32_t type,
+                             MtSessionMessageFn message, MtSessionMemberFn member, void *callback_user);
+    int (*session_send)(void *user, MtMod *mod, int32_t peer, uint32_t type,
+                        const void *data, size_t size);
+    int32_t (*session_self)(void *user);
+    int32_t (*session_authority)(void *user);
 } MtBackend;
 #define MT_AUDIO_VOICES 8
 #define MT_NOTIFY_IMAGE 128

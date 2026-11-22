@@ -309,6 +309,7 @@ void start(const StartOptions& opt) {
 }
 
 void frame() {
+    detail::session_drain();
     detail::Host& h = host();
     if (MtLoader* L = h.L) {
         // The saves committed since the last frame, on this thread, before this frame's FrameStart: the fs listener only queues them.

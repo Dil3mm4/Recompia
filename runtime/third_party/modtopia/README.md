@@ -1,4 +1,4 @@
-Modtopia (MIT, `LICENSE`), based on 0.6.1 with local API 0.7 save identity and core 0.8 profile overrides. The runtime links
+Modtopia (MIT, `LICENSE`), based on 0.6.1 with local API 0.7 save identity, API 0.8 session transport and core 0.8 profile overrides. The runtime links
 the core as `nxrt_modtopia` and embeds the mappings. Preserve these local extensions when updating the vendored sources.
 
 All mods inherit global settings from `config/<mod-id>.toml` (falling back to manifest defaults) and global enabled states from

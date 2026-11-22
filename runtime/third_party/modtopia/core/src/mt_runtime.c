@@ -346,6 +346,27 @@ static int h_save_identity(MtMod *m, MtSaveIdentity *out) {
     if (r != MT_OK) memset(out, 0, sizeof *out);
     return r;
 }
+/* Keep the Modtopia mod identity through the backend; types cannot be spoofed. */
+static int h_session_subscribe(MtMod *m, uint32_t type, MtSessionMessageFn msg,
+                               MtSessionMemberFn member, void *user) {
+    if (!m || !type || !msg) return MT_ERR;
+    MtLoader *L = m->L;
+    return L->be.session_subscribe
+        ? L->be.session_subscribe(L->be.user, m, type, msg, member, user) : MT_ERR_VERSION;
+}
+static int h_session_send(MtMod *m, int32_t peer, uint32_t type, const void *data, size_t n) {
+    if (!m || !type || (!data && n) || n > (size_t)1048576) return MT_ERR;
+    MtLoader *L = m->L;
+    return L->be.session_send
+        ? L->be.session_send(L->be.user, m, peer, type, data, n) : MT_ERR_VERSION;
+}
+static int32_t h_session_self(void) {
+    return g_L && g_L->be.session_self ? g_L->be.session_self(g_L->be.user) : -1;
+}
+static int32_t h_session_authority(void) {
+    return g_L && g_L->be.session_authority ? g_L->be.session_authority(g_L->be.user) : -1;
+}
+
 static const char *h_data_dir(MtMod *m) {
     if (!m->data_dir) {
         m->data_dir = mt_path_join(m->L->config_dir, m->m.id);
@@ -472,6 +493,10 @@ void mt_host_init(MtLoader *L) {
     h->audio_clear = h_audio_clear;
     h->notify_image = h_notify_image;
     h->save_identity = h_save_identity;
+    h->session_subscribe = h_session_subscribe;
+    h->session_send = h_session_send;
+    h->session_self = h_session_self;
+    h->session_authority = h_session_authority;
 }
 
 /* ---------------------------------------------------------------- start: check the points against the game, load the code */

@@ -317,6 +317,15 @@ MtBackend make_backend() {
     be.audio_write = &be_audio_write;
     be.audio_queued = &be_audio_queued;
     be.audio_clear = &be_audio_clear;
+    be.session_subscribe = [](void*, MtMod* mod, uint32_t type, MtSessionMessageFn msg,
+                              MtSessionMemberFn member, void* user) {
+        return session_subscribe(mod, type, msg, member, user);
+    };
+    be.session_send = [](void*, MtMod* mod, int32_t peer, uint32_t type, const void* data, size_t size) {
+        return session_send(mod, peer, type, data, size);
+    };
+    be.session_self = [](void*) { return session_self(); };
+    be.session_authority = [](void*) { return session_authority(); };
     return be;
 }
 
