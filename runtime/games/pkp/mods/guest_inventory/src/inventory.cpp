@@ -632,13 +632,20 @@ int init_mod(const MtHost* host, MtMod* mod) {
     // The mod's enabled state is the one and only opt-in, so the built-in
     // Modtopia Link Play mod fingerprint cannot hide mismatched settings.
     // Seamless co-op is a different game mode; the launcher marks those launches.
-    if (const char* coop=std::getenv("NXRT_PKP_COOP")) {
-        std::string v=coop;
-        for (char& c:v) c=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        if (v=="1" || v=="true" || v=="on" || v=="yes") {
-            mt_logf(host,mod,MT_LOG_INFO,"Inventory Link Play mod is inactive in seamless co-op");
-            return MT_OK;
-        }
+#if defined(_WIN32)
+    char* coop_raw=nullptr;
+    size_t coop_len=0;
+    if (_dupenv_s(&coop_raw,&coop_len,"NXRT_PKP_COOP")!=0) return MT_ERR_STATE;
+    std::string coop=coop_raw ? coop_raw : "";
+    std::free(coop_raw);
+#else
+    const char* coop_raw=std::getenv("NXRT_PKP_COOP");
+    std::string coop=coop_raw ? coop_raw : "";
+#endif
+    for (char& c:coop) c=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (coop=="1" || coop=="true" || coop=="on" || coop=="yes") {
+        mt_logf(host,mod,MT_LOG_INFO,"Inventory Link Play mod is inactive in seamless co-op");
+        return MT_OK;
     }
     std::string build=host->game_build_id?host->game_build_id:"";
     for (char& c:build) c=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
